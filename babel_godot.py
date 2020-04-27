@@ -4,7 +4,7 @@ import re
 __version__ = '0.1'
 
 
-_godot_node = re.compile(r'^\[node name="([^"]+)" type="([^"]+)"')
+_godot_node = re.compile(r'^\[node name="([^"]+)" (:?type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
 
 
@@ -66,6 +66,10 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
         if match:
             # Store which kind of node we're in
             current_node_type = match.group(2)
+            #instanced packed scenes don't have the type field,
+            #change current_node_type to empty string
+            current_node_type = current_node_type \
+                    if current_node_type is not None else ""
         elif line.startswith('['):
             # We're no longer in a node
             current_node_type = None
