@@ -6,6 +6,7 @@ __version__ = '0.2'
 
 _godot_node = re.compile(r'^\[node name="([^"]+)" (:?type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
+_csharp_string = re.compile(r'TranslationServer\.Translate\("(.+?)"')
 
 
 def _godot_unquote(string):
@@ -81,6 +82,16 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
-                    value = _godot_unquote(value)
+                    value = _godot_unquote(value.strip())
                     if value is not None:
                         yield (lineno, keyword, [value], [])
+
+
+def extract_csharp(fileobj, keywords, comment_tags, options):
+    encoding = options.get('encoding', 'utf-8')
+    
+    for lineno, line in enumerate(fileobj, start=1):
+            line = line.decode(encoding)
+            strings = _csharp_string.findall(line)
+            for string in strings:
+                yield (lineno, '', [string], [])
