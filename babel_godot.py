@@ -6,7 +6,7 @@ __version__ = '0.2'
 
 _godot_node = re.compile(r'^\[node name="([^"]+)" (:?type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
-_csharp_string = re.compile(r'TranslationServer\.Translate\("(.+?)"')
+_csharp_string = re.compile(r'TranslationServer\.Translate\("(.+?)(?<!\\)"')
 
 
 def _godot_unquote(string):
