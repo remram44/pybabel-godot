@@ -1,0 +1,27 @@
+name: Test
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Install
+        run: |
+          pip install Babel
+          pip install -e .
+      - name: Extract test project
+        run: |
+          cd testproject/
+          pybabel extract -F babelrc -k Label/text -k Resource/catchphrase -k tr -o translations_new.pot .
+      - name: Check extracted strings
+        run: |
+          sed '/POT-Creation-Date/d' <testproject/translations.pot >expected.pot
+          sed '/POT-Creation-Date/d' <testproject/translations_new.pot >actual.pot
+          diff -u expected.pot actual.pot
