@@ -20,3 +20,5 @@ you can extract messages to be translated from both your ``.gd`` and ``.tscn`` f
     pybabel extract -F babel_mapping_file -k Label/text -k Resource/catchphrase -k tr -o translations.pot .
 
 You can then create ``.po`` files from the POT catalog using `Poedit <https://poedit.net/>`_, or online services  such as `Crowdin <https://crowdin.com/>`_, `Transifex <https://www.transifex.com/>`_, or `Weblate <https://weblate.org/>`_.
+
+See ``testproject/`` in the repository for an example.
