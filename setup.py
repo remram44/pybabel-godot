@@ -33,5 +33,6 @@ setup(
     entry_points="""
     [babel.extractors]
     godot_scene = babel_godot:extract_godot_scene
+    godot_resource = babel_godot:extract_godot_resource
     """
 )
