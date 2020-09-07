@@ -3,6 +3,16 @@ Babel Godot plugin
 
 This is a plugin for `Babel <http://babel.pocoo.org/>`_, the internationalization library, that adds support for scene files from the `Godot game engine <https://godotengine.org/>`_.
 
+Installation
+------------
+
+Install Babel and this plugin::
+
+    pip install Babel Babel-Godot
+
+Usage
+-----
+
 Using a mapping file like this::
 
     [python: **.gd]
