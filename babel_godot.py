@@ -4,7 +4,7 @@ import re
 __version__ = '0.2'
 
 
-_godot_node = re.compile(r'^\[node name="([^"]+)" (:?type="([^"]+)")?')
+_godot_node = re.compile(r'^\[node name="([^"]+)" (?:type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
 
 
