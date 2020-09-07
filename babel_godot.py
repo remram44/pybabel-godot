@@ -4,7 +4,7 @@ import re
 __version__ = '0.2'
 
 
-_godot_node = re.compile(r'^\[(?:sub_)?resource|^\[node name="([^"]+)" (:?type="([^"]+)")?')
+_godot_node = re.compile(r'^\[node name="([^"]+)" (:?type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
 
 
@@ -37,7 +37,8 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
     :param fileobj: the seekable, file-like object the messages should be
                     extracted from
     :param keywords: a list of property names that should be localized, in the
-                     format 'NodeType/name' or 'name' (example: 'Label/text')
+                     format '<NodeType>/<name>' or '<name>' (example:
+                     'Label/text')
     :param comment_tags: a list of translator tags to search for and include
                          in the results (ignored)
     :param options: a dictionary of additional options (optional)
@@ -84,3 +85,42 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                     value = _godot_unquote(value)
                     if value is not None:
                         yield (lineno, keyword, [value], [])
+
+
+def extract_godot_resource(fileobj, keywords, comment_tags, options):
+    """Extract messages from Godot resource files (.res, .tres).
+
+    :param fileobj: the seekable, file-like object the messages should be
+                    extracted from
+    :param keywords: a list of property names that should be localized, in the
+                     format 'Resource/<name>' or '<name>' (example:
+                     'Resource/text')
+    :param comment_tags: a list of translator tags to search for and include
+                         in the results (ignored)
+    :param options: a dictionary of additional options (optional)
+    :rtype: iterator
+    """
+    encoding = options.get('encoding', 'utf-8')
+
+    properties_to_translate = {}
+    for keyword in keywords:
+        if keyword.startswith('Resource/'):
+            properties_to_translate[keyword[9:]] = keyword
+
+    def check_translate_property(property):
+        return properties_to_translate.get(property)
+
+    for lineno, line in enumerate(fileobj, start=1):
+        line = line.decode(encoding)
+        if line.startswith('['):
+            continue
+
+        match = _godot_property_str.match(line)
+        if match:
+            property = match.group(1)
+            value = match.group(2)
+            keyword = check_translate_property(property)
+            if keyword:
+                value = _godot_unquote(value)
+                if value is not None:
+                    yield (lineno, keyword, [value], [])
