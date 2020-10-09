@@ -5,7 +5,7 @@ __version__ = '1.0'
 
 
 _godot_node = re.compile(r'^\[node name="([^"]+)" (?:type="([^"]+)")?')
-_godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
+_godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*([\[|"].+)$')
 _godot_escaped_tr = re.compile(r'^.*[^A-Za-z0-9_]tr\(\\"([^\\"]+)\\"\)?')
 
 
@@ -49,6 +49,9 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
     current_node_type = None
 
+    multiline_keyword = ""
+    multiline_value = ""
+    
     look_for_builtin_tr = 'tr' in keywords
 
     properties_to_translate = {}
@@ -66,6 +69,44 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
+
+        # Handle multiline strings
+        if multiline_keyword:
+            if '", "' in line:
+                # Multiline string ends within an array of strings
+                line_parts = line.split('", "')
+                multiline_value += line_parts[0]
+
+                value = _godot_unquote('"' + multiline_value + '"')
+                if value is not None:
+                    yield (lineno, multiline_keyword, [value], [])
+
+                # Take care of intermediate strings in array (not multiline)
+                for line_part in line_parts[1:-1]:
+                    value = _godot_unquote('"' + line_part + '"')
+                    if value is not None:
+                        yield (lineno, multiline_keyword, [value], [])
+
+                # Continue with the last array item normally
+                multiline_value = ""
+                line = line_parts[-1]
+
+            if not line.endswith('"\n') and not line.endswith(']\n'):
+                # Continuation of multiline string
+                multiline_value += line
+            else:
+                # Multiline string ends
+                multiline_value += line.strip('"]\n')
+
+                value = _godot_unquote('"' + multiline_value + '"')
+                if value is not None:
+                    yield (lineno, multiline_keyword, [value], [])
+
+                multiline_keyword = ""
+                multiline_value = ""
+
+            continue
+
         match = _godot_node.match(line)
         if match:
             # Store which kind of node we're in
@@ -85,9 +126,23 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
-                    value = _godot_unquote(value)
-                    if value is not None:
-                        yield (lineno, keyword, [value], [])
+                    # Handle multiline strings
+                    if not value.endswith('"') and not value.endswith(']'):
+                        multiline_keyword = keyword
+                        multiline_value = value.strip('[ "') + "\n"
+                        continue
+
+                    # Handle array of strings
+                    if value.startswith('['):
+                        values = value.strip('[ "]').split('", "')
+                        for value in values:
+                            value = _godot_unquote('"' + value + '"')
+                            if value is not None:
+                                yield (lineno, keyword, [value], [])
+                    else:
+                        value = _godot_unquote(value)
+                        if value is not None:
+                            yield (lineno, keyword, [value], [])
         elif look_for_builtin_tr:
             # Handle Godot's tr() for built-in scripts
             match = _godot_escaped_tr.match(line)
