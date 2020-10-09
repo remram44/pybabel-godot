@@ -48,6 +48,9 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
     current_node_type = None
 
+    multiline_keyword = ""
+    multiline_value = ""
+
     properties_to_translate = {}
     for keyword in keywords:
         if '/' in keyword:
@@ -63,6 +66,28 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
+
+        # Handle multiline strings
+        if multiline_keyword:
+            if '", "' in line:
+                # Multiline string ends within an array of strings
+                print("end of multiline in array")
+            if not line.endswith('"\n') and not line.endswith(']\n'):
+                # Continuation of multiline string
+                multiline_value += line
+            else:
+                # Multiline string ends
+                multiline_value += line.strip('"]\n')
+
+                value = _godot_unquote('"' + multiline_value + '"')
+                if value is not None:
+                    yield (lineno, multiline_keyword, [value], [])
+
+                multiline_keyword = ""
+                multiline_value = ""
+
+            continue
+
         match = _godot_node.match(line)
         if match:
             # Store which kind of node we're in
@@ -82,6 +107,12 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
+                    # Handle multiline strings
+                    if not value.endswith('"') and not value.endswith(']'):
+                        multiline_keyword = keyword
+                        multiline_value = value.strip('[ "') + "\n"
+                        continue
+                        
                     # Handle array of strings
                     if value.startswith('['):
                         values = value.strip('[ "]').split('", "')
@@ -93,7 +124,6 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                         value = _godot_unquote(value)
                         if value is not None:
                             yield (lineno, keyword, [value], [])
-
 
 def extract_godot_resource(fileobj, keywords, comment_tags, options):
     """Extract messages from Godot resource files (.res, .tres).
