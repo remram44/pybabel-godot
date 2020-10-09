@@ -71,7 +71,23 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
         if multiline_keyword:
             if '", "' in line:
                 # Multiline string ends within an array of strings
-                print("end of multiline in array")
+                line_parts = line.split('", "')
+                multiline_value += line_parts[0]
+
+                value = _godot_unquote('"' + multiline_value + '"')
+                if value is not None:
+                    yield (lineno, multiline_keyword, [value], [])
+
+                # Take care of intermediate strings in array (not multiline)
+                for line_part in line_parts[1:-1]:
+                    value = _godot_unquote('"' + line_part + '"')
+                    if value is not None:
+                        yield (lineno, multiline_keyword, [value], [])
+
+                # Continue with the last array item normally
+                multiline_value = ""
+                line = line_parts[-1]
+
             if not line.endswith('"\n') and not line.endswith(']\n'):
                 # Continuation of multiline string
                 multiline_value += line
@@ -112,7 +128,7 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                         multiline_keyword = keyword
                         multiline_value = value.strip('[ "') + "\n"
                         continue
-                        
+
                     # Handle array of strings
                     if value.startswith('['):
                         values = value.strip('[ "]').split('", "')
