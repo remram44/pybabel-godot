@@ -6,6 +6,7 @@ __version__ = '1.0'
 
 _godot_node = re.compile(r'^\[node name="([^"]+)" (?:type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*([\[|"].+)$')
+_godot_escaped_tr = re.compile(r'^.*[^A-Za-z0-9_]tr\(\\"([^\\"]+)\\"\)?')
 
 
 def _godot_unquote(string):
@@ -50,6 +51,8 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
     multiline_keyword = ""
     multiline_value = ""
+    
+    look_for_builtin_tr = 'tr' in keywords
 
     properties_to_translate = {}
     for keyword in keywords:
@@ -140,6 +143,13 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                         value = _godot_unquote(value)
                         if value is not None:
                             yield (lineno, keyword, [value], [])
+        elif look_for_builtin_tr:
+            # Handle Godot's tr() for built-in scripts
+            match = _godot_escaped_tr.match(line)
+            if match:
+                value = _godot_unquote('"' + match.group(1) + '"')
+                if value is not None:
+                    yield (lineno, keyword, [value], [])
 
 def extract_godot_resource(fileobj, keywords, comment_tags, options):
     """Extract messages from Godot resource files (.res, .tres).
