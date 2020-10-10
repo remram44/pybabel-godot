@@ -31,6 +31,43 @@ def _godot_unquote(string):
                 result.append(c)
     return ''.join(result)
 
+def _assemble_multiline_string(lineno, line, multiline):
+    to_yield = []
+
+    if '", "' in line:
+        # Multiline string ends within an array of strings
+        line_parts = line.split('", "')
+        multiline['value'] += line_parts[0]
+
+        value = _godot_unquote('"' + multiline['value'] + '"')
+        if value is not None:
+            to_yield.append([multiline['keyword'], value])
+
+        # Take care of intermediate strings in array (not multiline)
+        for line_part in line_parts[1:-1]:
+            value = _godot_unquote('"' + line_part + '"')
+            if value is not None:
+                to_yield.append([multiline['keyword'], value])
+
+        # Continue with the last array item normally
+        multiline['value'] = ''
+        line = line_parts[-1]
+
+    if not line.endswith('"\n') and not line.endswith(']\n'):
+        # Continuation of multiline string
+        multiline['value'] += line
+    else:
+        # Multiline string ends
+        multiline['value'] += line.strip('"]\n')
+
+        value = _godot_unquote('"' + multiline['value'] + '"')
+        if value is not None:
+            to_yield.append([multiline['keyword'], value])
+
+        multiline['keyword'] = ''
+        multiline['value'] = ''
+
+    return to_yield
 
 def extract_godot_scene(fileobj, keywords, comment_tags, options):
     """Extract messages from Godot scene files (.tscn).
@@ -49,9 +86,8 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
     current_node_type = None
 
-    multiline_keyword = ""
-    multiline_value = ""
-    
+    multiline = {'keyword': '', 'value': ''}
+
     look_for_builtin_tr = 'tr' in keywords
 
     properties_to_translate = {}
@@ -71,39 +107,10 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
         line = line.decode(encoding)
 
         # Handle multiline strings
-        if multiline_keyword:
-            if '", "' in line:
-                # Multiline string ends within an array of strings
-                line_parts = line.split('", "')
-                multiline_value += line_parts[0]
-
-                value = _godot_unquote('"' + multiline_value + '"')
-                if value is not None:
-                    yield (lineno, multiline_keyword, [value], [])
-
-                # Take care of intermediate strings in array (not multiline)
-                for line_part in line_parts[1:-1]:
-                    value = _godot_unquote('"' + line_part + '"')
-                    if value is not None:
-                        yield (lineno, multiline_keyword, [value], [])
-
-                # Continue with the last array item normally
-                multiline_value = ""
-                line = line_parts[-1]
-
-            if not line.endswith('"\n') and not line.endswith(']\n'):
-                # Continuation of multiline string
-                multiline_value += line
-            else:
-                # Multiline string ends
-                multiline_value += line.strip('"]\n')
-
-                value = _godot_unquote('"' + multiline_value + '"')
-                if value is not None:
-                    yield (lineno, multiline_keyword, [value], [])
-
-                multiline_keyword = ""
-                multiline_value = ""
+        if multiline['keyword']:
+            to_yield = _assemble_multiline_string(lineno, line, multiline)
+            for item in to_yield:
+                yield (lineno, item[0], [item[1]], [])
 
             continue
 
@@ -126,14 +133,14 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
-                    # Handle multiline strings
+                    # Beginning of multiline string
                     if not value.endswith('"') and not value.endswith(']'):
-                        multiline_keyword = keyword
-                        multiline_value = value.strip('[ "') + "\n"
+                        multiline['keyword'] = keyword
+                        multiline['value'] = value.strip('[ "') + '\n'
                         continue
 
                     # Handle array of strings
-                    if value.startswith('['):
+                    if value.startswith('[ "'):
                         values = value.strip('[ "]').split('", "')
                         for value in values:
                             value = _godot_unquote('"' + value + '"')
@@ -166,10 +173,22 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
     """
     encoding = options.get('encoding', 'utf-8')
 
+    multiline = {'keyword': '', 'value': ''}
+
+    properties_to_translate = {}
+    for keyword in keywords:
+        if '/' in keyword:
+            properties_to_translate[tuple(keyword.split('/', 1))] = keyword
+        else:
+            properties_to_translate[(None, keyword)] = keyword
+
     properties_to_translate = {}
     for keyword in keywords:
         if keyword.startswith('Resource/'):
             properties_to_translate[keyword[9:]] = keyword
+        else:
+            # Without this else-case, any '<name>' properties (not starting with 'Resource/') would be ignored
+            properties_to_translate[keyword] = keyword
 
     def check_translate_property(property):
         return properties_to_translate.get(property)
@@ -179,12 +198,34 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
         if line.startswith('['):
             continue
 
+        # Handle multiline strings
+        if multiline['keyword']:
+            to_yield = _assemble_multiline_string(lineno, line, multiline)
+            for item in to_yield:
+                yield (lineno, item[0], [item[1]], [])
+
+            continue
+
         match = _godot_property_str.match(line)
         if match:
             property = match.group(1)
             value = match.group(2)
             keyword = check_translate_property(property)
             if keyword:
-                value = _godot_unquote(value)
-                if value is not None:
-                    yield (lineno, keyword, [value], [])
+                # Beginning of multiline string
+                if not value.endswith('"') and not value.endswith(']'):
+                    multiline['keyword'] = keyword
+                    multiline['value'] = value.strip('[ "') + '\n'
+                    continue
+
+                # Handle array of strings
+                if value.startswith('[ "'):
+                    values = value.strip('[ "]').split('", "')
+                    for value in values:
+                        value = _godot_unquote('"' + value + '"')
+                        if value is not None:
+                            yield (lineno, keyword, [value], [])
+                else:
+                    value = _godot_unquote(value)
+                    if value is not None:
+                        yield (lineno, keyword, [value], [])
