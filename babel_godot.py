@@ -31,7 +31,7 @@ def _godot_unquote(string):
                 result.append(c)
     return ''.join(result)
 
-def _assemble_multiline_string(lineno, line, multiline):
+def _assemble_multiline_string(line, multiline):
     to_yield = []
 
     if '", "' in line:
@@ -108,7 +108,7 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
 
         # Handle multiline strings
         if multiline['keyword']:
-            to_yield = _assemble_multiline_string(lineno, line, multiline)
+            to_yield = _assemble_multiline_string(line, multiline)
             for item in to_yield:
                 yield (lineno, item[0], [item[1]], [])
 
@@ -200,7 +200,7 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
 
         # Handle multiline strings
         if multiline['keyword']:
-            to_yield = _assemble_multiline_string(lineno, line, multiline)
+            to_yield = _assemble_multiline_string(line, multiline)
             for item in to_yield:
                 yield (lineno, item[0], [item[1]], [])
 
