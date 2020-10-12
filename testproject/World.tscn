@@ -13,7 +13,8 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
-text = "Hello from scene"
+text = "From scene:
+Hello!"
 __meta__ = {
 "_edit_use_anchors_": false
 }

@@ -21,8 +21,10 @@ msgstr ""
 msgid "Hello from script"
 msgstr ""
 
-#: World.tscn:16
-msgid "Hello from scene"
+#: World.tscn:17
+msgid ""
+"From scene:\n"
+"Hello!"
 msgstr ""
 
 #: protagonist.tres:9

@@ -61,8 +61,23 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
             keyword = properties_to_translate.get((None, property))
         return keyword
 
+    current_string = keyword = None
+
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
+
+        if current_string:
+            value, remainder = _godot_unquote(line)
+            current_string.append(value)
+            if remainder is None:  # Still un-terminated
+                pass
+            elif remainder.strip():
+                raise ValueError("Trailing data after string")
+            else:
+                yield (lineno, keyword, ['\n'.join(current_string)], [])
+                current_string = None
+            continue
+
         match = _godot_node.match(line)
         if match:
             # Store which kind of node we're in
@@ -84,9 +99,7 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 if keyword:
                     value, remainder = _godot_unquote(value[1:])
                     if remainder is None:  # Un-terminated string
-                        raise NotImplementedError(
-                            "Multi-line strings are not yet supported"
-                        )
+                        current_string = [value]
                     elif not remainder.strip():
                         yield (lineno, keyword, [value], [])
                     else:
@@ -116,8 +129,23 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
     def check_translate_property(property):
         return properties_to_translate.get(property)
 
+    current_string = keyword = None
+
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
+
+        if current_string:
+            value, remainder = _godot_unquote(line)
+            current_string.append(value)
+            if remainder is None:  # Still un-terminated
+                pass
+            elif remainder.strip():
+                raise ValueError("Trailing data after string")
+            else:
+                yield (lineno, keyword, ['\n'.join(current_string)], [])
+                current_string = None
+            continue
+
         if line.startswith('['):
             continue
 
@@ -129,9 +157,7 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
             if keyword:
                 value, remainder = _godot_unquote(value[1:])
                 if remainder is None:  # Un-terminated string
-                    raise NotImplementedError(
-                        "Multi-line strings are not yet supported"
-                    )
+                    current_string = [value]
                 elif not remainder.strip():
                     yield (lineno, keyword, [value], [])
                 else:
