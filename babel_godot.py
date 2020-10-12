@@ -177,13 +177,6 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
 
     properties_to_translate = {}
     for keyword in keywords:
-        if '/' in keyword:
-            properties_to_translate[tuple(keyword.split('/', 1))] = keyword
-        else:
-            properties_to_translate[(None, keyword)] = keyword
-
-    properties_to_translate = {}
-    for keyword in keywords:
         if keyword.startswith('Resource/'):
             properties_to_translate[keyword[9:]] = keyword
         else:
