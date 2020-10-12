@@ -9,11 +9,9 @@ _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
 
 
 def _godot_unquote(string):
-    if string[0] != '"' or string[-1] != '"':
-        return None
     result = []
     escaped = False
-    for c in string[1:-1]:
+    for i, c in enumerate(string):
         if escaped:
             if c == '\\':
                 result.append('\\')
@@ -26,9 +24,11 @@ def _godot_unquote(string):
         else:
             if c == '\\':
                 escaped = True
+            elif c == '"':
+                return ''.join(result), string[i + 1:]
             else:
                 result.append(c)
-    return ''.join(result)
+    return ''.join(result), None
 
 
 def extract_godot_scene(fileobj, keywords, comment_tags, options):
@@ -82,7 +82,7 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
-                    value = _godot_unquote(value)
+                    value, remainder = _godot_unquote(value[1:])
                     if value is not None:
                         yield (lineno, keyword, [value], [])
 
@@ -121,6 +121,6 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
             value = match.group(2)
             keyword = check_translate_property(property)
             if keyword:
-                value = _godot_unquote(value)
+                value, remainder = _godot_unquote(value[1:])
                 if value is not None:
                     yield (lineno, keyword, [value], [])
