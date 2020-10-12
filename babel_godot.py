@@ -83,8 +83,14 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 keyword = check_translate_property(property)
                 if keyword:
                     value, remainder = _godot_unquote(value[1:])
-                    if value is not None:
+                    if remainder is None:  # Un-terminated string
+                        raise NotImplementedError(
+                            "Multi-line strings are not yet supported"
+                        )
+                    elif not remainder.strip():
                         yield (lineno, keyword, [value], [])
+                    else:
+                        raise ValueError("Trailing data after string")
 
 
 def extract_godot_resource(fileobj, keywords, comment_tags, options):
@@ -122,5 +128,11 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
             keyword = check_translate_property(property)
             if keyword:
                 value, remainder = _godot_unquote(value[1:])
-                if value is not None:
+                if remainder is None:  # Un-terminated string
+                    raise NotImplementedError(
+                        "Multi-line strings are not yet supported"
+                    )
+                elif not remainder.strip():
                     yield (lineno, keyword, [value], [])
+                else:
+                    raise ValueError("Trailing data after string")
