@@ -9,11 +9,9 @@ _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
 
 
 def _godot_unquote(string):
-    if string[0] != '"' or string[-1] != '"':
-        return None
     result = []
     escaped = False
-    for c in string[1:-1]:
+    for i, c in enumerate(string):
         if escaped:
             if c == '\\':
                 result.append('\\')
@@ -26,9 +24,11 @@ def _godot_unquote(string):
         else:
             if c == '\\':
                 escaped = True
+            elif c == '"':
+                return ''.join(result), string[i + 1:]
             else:
                 result.append(c)
-    return ''.join(result)
+    return ''.join(result), None
 
 
 def extract_godot_scene(fileobj, keywords, comment_tags, options):
@@ -61,8 +61,23 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
             keyword = properties_to_translate.get((None, property))
         return keyword
 
+    current_string = keyword = None
+
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
+
+        if current_string:
+            value, remainder = _godot_unquote(line)
+            current_string.append(value)
+            if remainder is None:  # Still un-terminated
+                pass
+            elif remainder.strip():
+                raise ValueError("Trailing data after string")
+            else:
+                yield (lineno, keyword, ['\n'.join(current_string)], [])
+                current_string = None
+            continue
+
         match = _godot_node.match(line)
         if match:
             # Store which kind of node we're in
@@ -82,9 +97,13 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
-                    value = _godot_unquote(value)
-                    if value is not None:
+                    value, remainder = _godot_unquote(value[1:])
+                    if remainder is None:  # Un-terminated string
+                        current_string = [value]
+                    elif not remainder.strip():
                         yield (lineno, keyword, [value], [])
+                    else:
+                        raise ValueError("Trailing data after string")
 
 
 def extract_godot_resource(fileobj, keywords, comment_tags, options):
@@ -110,8 +129,23 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
     def check_translate_property(property):
         return properties_to_translate.get(property)
 
+    current_string = keyword = None
+
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
+
+        if current_string:
+            value, remainder = _godot_unquote(line)
+            current_string.append(value)
+            if remainder is None:  # Still un-terminated
+                pass
+            elif remainder.strip():
+                raise ValueError("Trailing data after string")
+            else:
+                yield (lineno, keyword, ['\n'.join(current_string)], [])
+                current_string = None
+            continue
+
         if line.startswith('['):
             continue
 
@@ -121,6 +155,10 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
             value = match.group(2)
             keyword = check_translate_property(property)
             if keyword:
-                value = _godot_unquote(value)
-                if value is not None:
+                value, remainder = _godot_unquote(value[1:])
+                if remainder is None:  # Un-terminated string
+                    current_string = [value]
+                elif not remainder.strip():
                     yield (lineno, keyword, [value], [])
+                else:
+                    raise ValueError("Trailing data after string")
