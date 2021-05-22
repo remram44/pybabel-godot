@@ -21,6 +21,7 @@ def _godot_unquote(string):
                 result.append('\t')
             else:
                 result.append(c)
+            escaped = False
         else:
             if c == '\\':
                 escaped = True
