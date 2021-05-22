@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='Babel-Godot',
-    version='1.0',
+    version='1.1',
     description='Plugin for Babel to support Godot scene files (.tscn)',
     author='Remi Rampin',
     author_email='remirampin@gmail.com',
