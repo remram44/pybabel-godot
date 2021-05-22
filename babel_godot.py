@@ -5,7 +5,7 @@ __version__ = '1.0'
 
 
 _godot_node = re.compile(r'^\[node name="([^"]+)" (?:type="([^"]+)")?')
-_godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)$')
+_godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)\Z', re.DOTALL)
 
 
 def _godot_unquote(string):
@@ -75,7 +75,7 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
             elif remainder.strip():
                 raise ValueError("Trailing data after string")
             else:
-                yield (lineno, keyword, ['\n'.join(current_string)], [])
+                yield (lineno, keyword, [''.join(current_string)], [])
                 current_string = None
             continue
 
