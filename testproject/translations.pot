@@ -21,7 +21,7 @@ msgstr ""
 msgid "Hello from script"
 msgstr ""
 
-#: World.tscn:18
+#: World.tscn:16
 msgid ""
 "From \"label\" \\in scene:\n"
 "Hello\n"
