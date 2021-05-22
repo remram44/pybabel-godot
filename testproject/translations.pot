@@ -23,7 +23,7 @@ msgstr ""
 
 #: World.tscn:17
 msgid ""
-"From scene:\n"
+"From \"label\" \\in scene:\n"
 "Hello!"
 msgstr ""
 
