@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import io
 from setuptools import setup
 
 
+with io.open('README.rst', encoding='utf-8') as fp:
+    description = fp.read()
 setup(
     name='Babel-Godot',
     version='1.1',
     description='Plugin for Babel to support Godot scene files (.tscn)',
     author='Remi Rampin',
     author_email='remirampin@gmail.com',
+    long_description=description,
     license='BSD',
     url='https://github.com/remram44/pybabel-godot',
 
