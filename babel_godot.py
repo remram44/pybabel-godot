@@ -8,28 +8,35 @@ _godot_node = re.compile(r'^\[node name="([^"]+)" (?:type="([^"]+)")?')
 _godot_property_str = re.compile(r'^([A-Za-z0-9_]+)\s*=\s*(".+)\Z', re.DOTALL)
 
 
-def _godot_unquote(string):
-    result = []
-    escaped = False
-    for i, c in enumerate(string):
-        if escaped:
-            if c == '\\':
-                result.append('\\')
-            elif c == 'n':
-                result.append('\n')
-            elif c == 't':
-                result.append('\t')
+class StringReader(object):
+    def __init__(self, lineno):
+        self.result = []
+        self.lineno = lineno
+
+    def parse_line(self, string):
+        escaped = False
+        for i, c in enumerate(string):
+            if escaped:
+                if c == '\\':
+                    self.result.append('\\')
+                elif c == 'n':
+                    self.result.append('\n')
+                elif c == 't':
+                    self.result.append('\t')
+                else:
+                    self.result.append(c)
+                escaped = False
             else:
-                result.append(c)
-            escaped = False
-        else:
-            if c == '\\':
-                escaped = True
-            elif c == '"':
-                return ''.join(result), string[i + 1:]
-            else:
-                result.append(c)
-    return ''.join(result), None
+                if c == '\\':
+                    escaped = True
+                elif c == '"':
+                    return string[i + 1:]
+                else:
+                    self.result.append(c)
+        return None
+
+    def get_result(self):
+        return ''.join(self.result), self.lineno
 
 
 def extract_godot_scene(fileobj, keywords, comment_tags, options):
@@ -62,26 +69,26 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
             keyword = properties_to_translate.get((None, property))
         return keyword
 
-    current_string = current_string_lineno = keyword = None
+    current_value = keyword = None
 
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
 
-        if current_string:
-            value, remainder = _godot_unquote(line)
-            current_string.append(value)
+        if current_value:
+            remainder = current_value.parse_line(line)
             if remainder is None:  # Still un-terminated
                 pass
             elif remainder.strip():
                 raise ValueError("Trailing data after string")
             else:
+                value, value_lineno = current_value.get_result()
                 yield (
-                    current_string_lineno,
+                    value_lineno,
                     keyword,
-                    [''.join(current_string)],
+                    [value],
                     [],
                 )
-                current_string = current_string_lineno = None
+                current_value = None
             continue
 
         match = _godot_node.match(line)
@@ -103,12 +110,14 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
                 value = match.group(2)
                 keyword = check_translate_property(property)
                 if keyword:
-                    value, remainder = _godot_unquote(value[1:])
-                    if remainder is None:  # Un-terminated string
-                        current_string = [value]
-                        current_string_lineno = lineno
+                    current_value = StringReader(lineno)
+                    remainder = current_value.parse_line(value[1:])
+                    if remainder is None:
+                        pass  # Un-terminated string
                     elif not remainder.strip():
-                        yield (lineno, keyword, [value], [])
+                        value, value_lineno = current_value.get_result()
+                        yield (value_lineno, keyword, [value], [])
+                        current_value = None
                     else:
                         raise ValueError("Trailing data after string")
 
@@ -136,26 +145,26 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
     def check_translate_property(property):
         return properties_to_translate.get(property)
 
-    current_string = current_string_lineno = keyword = None
+    current_value = keyword = None
 
     for lineno, line in enumerate(fileobj, start=1):
         line = line.decode(encoding)
 
-        if current_string:
-            value, remainder = _godot_unquote(line)
-            current_string.append(value)
-            if remainder is None:  # Still un-terminated
-                pass
+        if current_value:
+            remainder = current_value.parse_line(line)
+            if remainder is None:
+                pass  # Still un-terminated
             elif remainder.strip():
                 raise ValueError("Trailing data after string")
             else:
+                value, value_lineno = current_value.get_result()
                 yield (
-                    current_string_lineno,
+                    value_lineno,
                     keyword,
-                    ['\n'.join(current_string)],
+                    [value],
                     [],
                 )
-                current_string = current_string_lineno = None
+                current_value = None
             continue
 
         if line.startswith('['):
@@ -167,11 +176,13 @@ def extract_godot_resource(fileobj, keywords, comment_tags, options):
             value = match.group(2)
             keyword = check_translate_property(property)
             if keyword:
-                value, remainder = _godot_unquote(value[1:])
-                if remainder is None:  # Un-terminated string
-                    current_string = [value]
-                    current_string_lineno = lineno
+                current_value = StringReader(lineno)
+                remainder = current_value.parse_line(value[1:])
+                if remainder is None:
+                    pass  # Un-terminated string
                 elif not remainder.strip():
-                    yield (lineno, keyword, [value], [])
+                    value, value_lineno = current_value.get_result()
+                    yield (value_lineno, keyword, [value], [])
+                    current_value = None
                 else:
                     raise ValueError("Trailing data after string")
