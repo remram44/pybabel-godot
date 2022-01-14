@@ -88,8 +88,8 @@ def extract_godot_scene(fileobj, keywords, comment_tags, options):
         if match:
             # Store which kind of node we're in
             current_node_type = match.group(2)
-            #instanced packed scenes don't have the type field,
-            #change current_node_type to empty string
+            # Instanced packed scenes don't have the type field,
+            # change current_node_type to empty string
             current_node_type = current_node_type \
                     if current_node_type is not None else ""
         elif line.startswith('['):
