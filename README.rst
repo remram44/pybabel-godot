@@ -25,7 +25,7 @@ Using a mapping file like this::
     [godot_resource: **.tres]
     encoding = utf-8
 
-you can extract messages to be translated from both your ``.gd`` and ``.tscn`` files using::
+you can extract messages to be translated from your ``.gd``, ``.tres``, and ``.tscn`` files using::
 
     pybabel extract -F babel_mapping_file -k Label/text -k Resource/catchphrase -k tr -o translations.pot .
 

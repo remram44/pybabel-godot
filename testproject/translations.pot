@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.9.1\n"
 
-#: Custom.gd:4
+#: Custom.gd:8
 msgid "Hello from script"
 msgstr ""
 
@@ -26,6 +26,10 @@ msgid ""
 "From \"label\" \\in scene:\n"
 "Hello\n"
 "World!"
+msgstr ""
+
+#: World.tscn:27
+msgid "Hello from scene"
 msgstr ""
 
 #: protagonist.tres:9

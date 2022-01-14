@@ -22,3 +22,6 @@ __meta__ = {
 
 [node name="Custom" type="Node2D" parent="."]
 script = ExtResource( 1 )
+age = 24
+fullname = "John Doe"
+catchphrase = "Hello from scene"
