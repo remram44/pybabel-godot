@@ -8,7 +8,7 @@ with io.open('README.rst', encoding='utf-8') as fp:
     description = fp.read()
 setup(
     name='Babel-Godot',
-    version='1.1',
+    version='1.2',
     description='Plugin for Babel to support Godot scene files (.tscn)',
     author='Remi Rampin',
     author_email='remirampin@gmail.com',
@@ -22,13 +22,8 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
