@@ -63,9 +63,7 @@ class ArrayReader(object):
         i = 0
         while i < len(string):
             c = string[i]
-            if c in ' \t,':
-                i = i + 1
-            elif c == ']':
+            if c == ']':
                 return string[i + 1:]
             elif c == '"':
                 self.string = StringReader(lineno)
@@ -78,9 +76,7 @@ class ArrayReader(object):
                     self.string = None
                     i = 0
             else:
-                print("Unexpected char %r" % (c,))
                 i = i + 1
-                #raise ValueError("Unexpected character %r" % (c,))
 
         raise ValueError("Unterminated array")
 
