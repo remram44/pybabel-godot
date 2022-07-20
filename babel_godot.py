@@ -78,7 +78,8 @@ class ArrayReader(object):
                     self.string = None
                     i = 0
             else:
-                raise ValueError("Unexpected character %r" % (c,))
+                print("Unexpected char %r" % (c,))
+                #raise ValueError("Unexpected character %r" % (c,))
 
         raise ValueError("Unterminated array")
 
